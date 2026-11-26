@@ -1,0 +1,63 @@
+# Cal.diy for Coolify (Docker Compose build pack)
+# Put this file in the root of your cal.diy fork.
+# Coolify fills the SERVICE_* variables automatically.
+
+services:
+  calcom:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CALCOM_TELEMETRY_DISABLED: "1"
+        NEXT_PUBLIC_LICENSE_CONSENT: "agree"
+    restart: unless-stopped
+    environment:
+      # Coolify routes your domain to port 3000 of this container
+      - SERVICE_URL_CALCOM_3000
+      - NEXT_PUBLIC_WEBAPP_URL=${SERVICE_URL_CALCOM}
+      - NEXTAUTH_URL=${SERVICE_URL_CALCOM}
+      - NEXTAUTH_SECRET=${SERVICE_BASE64_64_NEXTAUTH}
+      - CALENDSO_ENCRYPTION_KEY=${SERVICE_BASE64_CALENDSO}
+      - CALCOM_TELEMETRY_DISABLED=1
+      # Database
+      - DATABASE_HOST=postgres:5432
+      - DATABASE_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/calcom
+      - DATABASE_DIRECT_URL=postgresql://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/calcom
+      - REDIS_URL=redis://redis:6379
+      # E-mail (fill in Coolify, e.g. Resend SMTP)
+      - EMAIL_FROM=${EMAIL_FROM:-termine@reimann.media}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Reimann Media}
+      - EMAIL_SERVER_HOST=${EMAIL_SERVER_HOST:-smtp.resend.com}
+      - EMAIL_SERVER_PORT=${EMAIL_SERVER_PORT:-465}
+      - EMAIL_SERVER_USER=${EMAIL_SERVER_USER:-resend}
+      - EMAIL_SERVER_PASSWORD=${EMAIL_SERVER_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - calcom-db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_DB=calcom
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d calcom"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - calcom-redis:/data
+
+volumes:
+  calcom-db:
+  calcom-redis:
