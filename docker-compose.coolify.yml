@@ -4,12 +4,7 @@
 
 services:
   calcom:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CALCOM_TELEMETRY_DISABLED: "1"
-        NEXT_PUBLIC_LICENSE_CONSENT: "agree"
+    image: ghcr.io/thiebaudreimann/cal.diy:latest
     restart: unless-stopped
     environment:
       # Coolify routes your domain to port 3000 of this container
